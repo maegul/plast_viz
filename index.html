@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+
+<html>
+
+<head>
+	<style type="text/css">
+
+	text {
+		font: 12px sans-serif;
+	}
+
+	rect {
+	}
+
+	.axis path {
+		fill: none;
+		stroke: #000;
+		stroke-width: 0.8px;
+		shape-rendering: crispEdges;
+	}
+
+	.acells,
+	.acellsEn,
+	.ccells {
+		stroke: #CCC;
+		stroke-width: 1px;
+		cursor: pointer;
+	}
+
+	.acellCon {
+		stroke: #000;
+		stroke-width: 1px;
+	}
+
+
+	.ccells {
+		fill: #EEE;
+	}
+
+	.legend {
+		stroke-width: 0px;
+	}
+
+	.tun {
+		font: 12px sans-serif;
+		position: relative;
+		bottom:160px;
+	}
+
+	</style>
+
+
+	<script src="husl.js"></script>
+
+	<script src="https://cdn.jsdelivr.net/lodash/4.6.1/lodash.min.js"></script>
+
+	<script src="http://d3js.org/d3.v3.js"></script>
+	<script src="https://d3js.org/d3-queue.v2.min.js"></script>
+</head>
+
+
+
+<body>
+
+<div id='lay_a'></div>
+
+
+<div id='lay_c'></div>
+
+<script>
+
+
+// Orientation 
+// Preferred orientation - A cells and final C cell
+// beg v end wts (scatter/line plot of perc st v perc end)
+// SF-Ori resposne curves of C cell
+// C cell receptive field
+// scatter of preferred oris and CVs - with brush (changes stroke-width in ntwk plot)
+// Highlighting of relevant data point in scatter plots when hovering over network
+
+// Dimensions
+
+
+var margin = {
+	top: 20,
+	right: 20,
+	bottom: 20,
+	left: 20
+};
+
+var chart_area_wigth = 200,
+	chart_area_height = 200;
+
+var legend_width = 60;
+
+var width = chart_area_wigth - (margin.left + margin.right);
+var height = chart_area_height - (margin.top + margin.bottom);
+
+var legend_canv = d3.select('#lay_a').append('svg')
+				.attr('width', legend_width)
+				.attr('height', chart_area_height);
+
+
+var svg_a = d3.select('#lay_a').append('svg')
+			.attr('width', chart_area_wigth)
+			.attr('height', chart_area_height);
+
+
+var plot_a = svg_a.append('g')
+			.attr('transform', 'translate('+margin.left+','+margin.top + ')');
+
+
+
+var svg_a_en = d3.select('#lay_a').append('svg')
+			.attr('width', chart_area_wigth)
+			.attr('height', chart_area_height);
+
+
+var plot_a_en = svg_a_en.append('g')
+			.attr('transform', 'translate('+margin.left+','+margin.top + ')');
+
+
+var legend_canv_en = d3.select('#lay_a').append('svg')
+				.attr('width', legend_width)
+				.attr('height', chart_area_height);
+
+
+
+
+var svg_c = d3.select('#lay_c').append('svg')
+			.attr('width', chart_area_wigth)
+			.attr('height', chart_area_height);
+
+
+var plot_c = svg_c.append('g')
+			.attr('transform', 'translate('+margin.left+','+margin.top + ')');
+
+
+
+
+
+
+var queue = d3_queue.queue();
+	queue.defer(d3.json, 'a_data_init.json');
+	queue.defer(d3.json, 'c_data_tun.json');
+	queue.await(makeNtwk);
+
+
+function makeNtwk(error, a_data, c_data){
+
+	if (error) throw error;
+
+
+
+
+	function lin2sq(n, sz){
+
+		var c = Math.ceil(n / sz);
+		var r = ( (n-1)%sz) + 1;
+
+		return [parseInt(r), parseInt(c)];
+	}
+
+
+	var n_a = a_data.length;
+	var sz_a = parseInt(Math.sqrt(n_a));
+
+	var gridsize_a = Math.floor(width / sz_a);
+
+
+	var n_c = c_data.length;
+	var sz_c = parseInt(Math.sqrt(n_c));
+
+	var gridsize_c = Math.floor(width / sz_c);
+
+
+	var max_wt_st = d3.max(c_data.map(function(c){
+		return d3.max(c.a_wts_st.map(function(wt){
+			return wt.wt;
+		}));
+	}));
+
+	var max_wt_en = d3.max(c_data.map(function(c){
+		return d3.max(c.a_wts_en.map(function(wt){
+			return wt.wt;
+		}));
+	}));
+
+
+	// Continuous color scale for lay A wts
+
+	var scale_a_hue = 281.1; // Purple!
+	var scale_a_lum = 50; 
+	var scale_a_sat = 80;
+
+	var scale_a_st = d3.scale.linear()
+				.domain([0, max_wt_st])
+				.range([100, 0])
+
+	var scale_a_en = d3.scale.linear()
+			.domain([0, max_wt_en])
+			.range([100, 0])
+
+	function col_scal_a(wt){
+		return HUSL.toHex(scale_a_hue, scale_a_sat, scale_a_st(wt));
+	}
+
+	function col_scal_a_en(wt){
+		return HUSL.toHex(scale_a_hue, scale_a_sat, scale_a_en(wt));
+	}
+
+
+
+	// Layer A
+
+
+
+	var legend = legend_canv.append('g')
+					.attr('transform', 'translate('+margin.left+','+margin.top + ')');
+
+	var leg_cards = legend.selectAll('.legend')
+			.data(_.rangeRight(0, max_wt_st, max_wt_st/50));
+
+	leg_cards.enter().append('rect').classed('legend', true)
+			.attr('height', height/50)
+			.attr('width', gridsize_a)
+			.attr('y', function(d, i){
+				return i * height/50;
+			})
+			.style('fill', function(d){
+				return col_scal_a(d);
+			})
+			.style('stroke', function(d){
+				return col_scal_a(d)
+			})
+			.style('stroke-width', 0.5+'px');
+
+
+
+	var col_leg_scale = d3.scale.linear()
+							.domain([0, max_wt_st])
+							.range([height, 0]);
+
+	var col_axis_a = d3.svg.axis()
+					.orient('right')
+					.scale(col_leg_scale)
+					.ticks(5);
+
+
+
+
+	legend_canv.append('g')
+				.classed('col_axis_a axis', true)
+				.attr('width', 80)
+				.attr('height', chart_area_height)				
+				.attr('transform', 'translate('+(margin.left+gridsize_a)+',' + margin.top +')')
+				.call(col_axis_a);
+
+
+
+
+	var legend_en = legend_canv_en.append('g')
+					.attr('transform', 'translate('+margin.left+','+margin.top + ')');
+
+	var leg_cards_en = legend_en.selectAll('.legendEn')
+			.data(_.rangeRight(0, max_wt_en, max_wt_en/50));
+
+	leg_cards_en.enter().append('rect').classed('legendEn', true)
+			.attr('height', height/50)
+			.attr('width', gridsize_a)
+			.attr('y', function(d, i){
+				return i * height/50;
+			})
+			.style('fill', function(d){
+				return col_scal_a_en(d);
+			})
+			.style('stroke', function(d){
+				return col_scal_a_en(d)
+			})
+			.style('stroke-width', 0.5+'px');
+
+
+
+	var col_leg_scale_en = d3.scale.linear()
+							.domain([0, max_wt_en])
+							.range([height, 0]);
+
+	var col_axis_a_en = d3.svg.axis()
+					.orient('right')
+					.scale(col_leg_scale_en)
+					.ticks(8);
+
+
+
+
+	legend_canv_en.append('g')
+				.classed('col_axis_a_en axis', true)
+				.attr('width', chart_area_wigth)
+				.attr('height', chart_area_height)				
+				.attr('transform', 'translate('+(margin.left+gridsize_a)+',' + margin.top +')')
+				.call(col_axis_a_en);
+
+
+
+	// legend_canv.append('g')
+	// 		.classed('col_axis_a')
+	// 		.attr('transform','translate('+gridsize_a+',0)')
+	// 		.call(col_axis_a);
+
+
+
+	var a_cells = plot_a.selectAll(".cell.acells")
+			.data(a_data, function(d) {
+				return d.id;
+			});
+
+	a_cells.enter().append('rect').classed('cell acells', true)
+			.attr('x', function(d) {
+				var coord = lin2sq(d.id+1, sz_a);
+				return (coord[1]-1)*gridsize_a;
+			})
+			.attr('y', function(d) {
+				var coord = lin2sq(d.id+1, sz_a);
+				return (coord[0]-1)*gridsize_a;
+			})
+			.attr('rx', 6)
+			.attr('ry', 6)
+			.attr('width', gridsize_a*0.9)
+			.attr('height', gridsize_a*0.9)
+			.style('fill', function(d){
+				return col_scal_a(d.wt);
+			});
+
+
+
+
+	var a_cells_en = plot_a_en.selectAll(".cell.acellsEn")
+			.data(a_data, function(d) {
+				return d.id;
+			});
+
+	a_cells_en.enter().append('rect').classed('cell acellsEn', true)
+			.attr('x', function(d) {
+				var coord = lin2sq(d.id+1, sz_a);
+				return (coord[1]-1)*gridsize_a;
+			})
+			.attr('y', function(d) {
+				var coord = lin2sq(d.id+1, sz_a);
+				return (coord[0]-1)*gridsize_a;
+			})
+			.attr('rx', 6)
+			.attr('ry', 6)
+			.attr('width', gridsize_a*0.9)
+			.attr('height', gridsize_a*0.9)
+			.style('fill', function(d){
+				return col_scal_a(d.wt);
+			});
+
+
+
+
+	// Layer C
+
+	var c_cells = plot_c.selectAll(".cell.ccells")
+				.data(c_data, function(d){
+					return d.idx;
+				});
+
+
+	var tun_info = d3.select('#lay_c')
+						.append('text')
+						.classed('tun', true)
+						.style('visibility', 'hidden');
+
+
+	c_cells.enter().append('rect').classed('cell ccells', true)
+			.attr('x', function(d) {
+				var coord = lin2sq(d.idx+1, sz_c);
+				return (coord[1]-1)*gridsize_c;
+			})
+			.attr('y', function(d) {
+				var coord = lin2sq(d.idx+1, sz_c);
+				return (coord[0]-1)*gridsize_c;
+			})
+			.attr('rx', 3)
+			.attr('ry', 3)
+			.attr('width', gridsize_c)
+			.attr('height', gridsize_c)
+			.on('mouseover', function(d){
+				d3.select(this).style('fill', '#b0a8f1');
+				a_update_st(d.a_wts_st)
+				a_update_en(d.a_wts_st, d.a_wts_en);
+
+				var tun = d.tun;
+				return tun_info.style('visibility', 'visible').text('pref_ori: '+tun.pref_ori+' cv: '+tun.cv);
+			})
+			.on('mouseout', function(){
+				d3.select(this).style('fill', null);
+			});
+			// .on('click', function(d){
+			// 	a_update(d.a_wts);
+			// });
+
+
+
+
+	function a_update(a_data) {
+
+		a_cells.data(a_data, function(d){
+				return d.id;
+			})
+			.style('fill', function(d){
+				return col_scal_a(d.wt);
+			});
+
+	};
+
+
+
+	function a_update_st(a_data){
+		// Input is start a_wts {id, wt}
+
+		a_idx = a_data.map(function(ad){
+			return ad.id;
+		})
+
+
+		d3.selectAll('.acells')
+			.classed('acellCon', false)
+			.style('fill', col_scal_a(0));
+
+
+		acells = d3.selectAll('.acells').filter(function(d,i){
+			return _.includes(a_idx, d.id)
+		}).data(a_data, function(d){return d.id;});
+
+
+		acells.classed('acellCon', true)
+			.style('fill', function(d){
+
+				return col_scal_a(d.wt);
+			});
+
+
+
+
+	};
+
+
+	function a_update_en(a_cels_con, a_data){
+		// Input is start a_wts {id, wt}
+
+		var a_idx = a_data.map(function(ad){
+			return ad.id;
+		})
+
+		d3.selectAll('.acellsEn')
+			.classed('acellCon', false)
+			.style('fill', col_scal_a(0));
+
+
+		var acells = d3.selectAll('.acellsEn').filter(function(d,i){
+			return _.includes(a_idx, d.id)
+		}).data(a_data, function(d){return d.id;});
+
+		acells.style('fill', function(d){
+
+				return col_scal_a_en(d.wt);
+			});
+
+
+		var a_idx_bef = a_cels_con.map(function(ad){
+			return ad.id;
+		});
+
+		d3.selectAll('.acellsEn').filter(function(d,i){
+			return _.includes(a_idx_bef, d.id);
+		}).classed('acellCon', true);
+
+
+
+	};
+
+
+
+
+}
+
+
+
+
+
+
+</script>
+
+
+
+</body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</html>
