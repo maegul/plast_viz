@@ -6,6 +6,16 @@
 <head>
 	<style type="text/css">
 
+/*	* {
+		outline: #F00 solid 1px;
+	}
+*/
+
+
+	div {
+		font: 12px sans-serif;
+	}
+
 	text {
 		font: 12px sans-serif;
 	}
@@ -23,7 +33,7 @@
 	.acells,
 	.acellsEn,
 	.ccells {
-		stroke: #CCC;
+		stroke: #EEE;
 		stroke-width: 1px;
 		cursor: pointer;
 	}
@@ -42,16 +52,104 @@
 		stroke-width: 0px;
 	}
 
+	.tun_cont {
+		display: -webkit-flex;
+		display: flex;
+		-webkit-flex-direction: column;
+		direction: column;
+		-webkit-align-items: center;
+		align-items: center
+	}
+
 	.tun {
 		font: 12px sans-serif;
-		position: relative;
-		bottom:160px;
+		min-width: 90px;
+/*		position: relative;
+		bottom:160px;*/
 	}
+
+
+
+	#canvas {
+		display: -webkit-flex;
+		display: flex;
+		-webkit-flex-direction: row;
+		direction: row;
+		-webkit-justify-content: center;
+		justify-content: center;
+	}
+
+	#right {
+		display: -webkit-flex;
+		display: flex;
+		-webkit-flex-direction: row;
+		direction: row;
+		-webkit-justify-content: center;
+		justify-content: center;
+		-webkit-align-items: center;
+		align-items: center
+	}
+
+
+	.lay_a_cont,
+	.lay_c_cont {
+	}
+
+	
+	.lay_a_cont {
+		display: -webkit-flex;
+		display: flex;
+		-webkit-flex-direction: row;
+		direction: row;
+		-webkit-justify-content: center;
+		justify-content: center;
+	}
+
+	.lay_c_cont {
+		display: -webkit-flex;
+		display: flex;
+		-webkit-flex-direction: column;
+		direction: column;
+		-webkit-justify-content: center;
+		justify-content: center;
+		-webkit-align-items:center;
+		align-items:center;
+	}
+
+	.ttip {
+		background-color: rgba(255, 255, 255, 0.7);
+	}	
+
+	.scat_st,
+	.scat_en {
+/*		fill: #9d5bff;
+*/		stroke-width: 1px;
+/*		stroke: #9d5bff;
+*/		opacity: 0.35;
+	}
+
+
+	.scat_fade {
+		stroke-opacity:0.2;
+		opacity:0.05;
+	}
+
+
+	.scat_sel {
+		r: 6;
+		stroke-width: 2px;
+		stroke: #fd006d;
+		stroke-opacity:1;
+		opacity: 1;
+	}
+
+
 
 	</style>
 
 
-	<script src="husl.js"></script>
+	<script src="/Users/errollloyd/Dropbox/Science/ResBaz/Code/D3_src/colorbrewer.js"></script>
+	<script src="/Users/errollloyd/Dropbox/Science/ResBaz/Code/D3_src/husl.js"></script>
 
 	<script src="https://cdn.jsdelivr.net/lodash/4.6.1/lodash.min.js"></script>
 
@@ -63,10 +161,21 @@
 
 <body>
 
-<div id='lay_a'></div>
+<div id='canvas'>
+
+<div id='left'>
+	<div id='lay_a'></div>
+
+	<div id='lay_c'></div>
+</div>
 
 
-<div id='lay_c'></div>
+<div id='right'>
+
+
+</div>
+
+</div>
 
 <script>
 
@@ -79,8 +188,10 @@
 // scatter of preferred oris and CVs - with brush (changes stroke-width in ntwk plot)
 // Highlighting of relevant data point in scatter plots when hovering over network
 
-// Dimensions
 
+
+
+// First Plot
 
 var margin = {
 	top: 20,
@@ -92,14 +203,15 @@ var margin = {
 var chart_area_wigth = 200,
 	chart_area_height = 200;
 
-var legend_width = 60;
 
 var width = chart_area_wigth - (margin.left + margin.right);
 var height = chart_area_height - (margin.top + margin.bottom);
 
-var legend_canv = d3.select('#lay_a').append('svg')
-				.attr('width', legend_width)
-				.attr('height', chart_area_height);
+
+d3.select('#lay_a').classed('lay_a_cont', true);
+d3.select('#lay_c').classed('lay_c_cont', true);
+
+
 
 
 var svg_a = d3.select('#lay_a').append('svg')
@@ -111,6 +223,13 @@ var plot_a = svg_a.append('g')
 			.attr('transform', 'translate('+margin.left+','+margin.top + ')');
 
 
+var leg_2d_width_buffer = 10; 
+
+var legend_canv = d3.select('#lay_a').append('svg')
+				.attr('width', (chart_area_height+leg_2d_width_buffer))
+				.attr('height', chart_area_height);
+
+
 
 var svg_a_en = d3.select('#lay_a').append('svg')
 			.attr('width', chart_area_wigth)
@@ -120,10 +239,6 @@ var svg_a_en = d3.select('#lay_a').append('svg')
 var plot_a_en = svg_a_en.append('g')
 			.attr('transform', 'translate('+margin.left+','+margin.top + ')');
 
-
-var legend_canv_en = d3.select('#lay_a').append('svg')
-				.attr('width', legend_width)
-				.attr('height', chart_area_height);
 
 
 
@@ -137,22 +252,71 @@ var plot_c = svg_c.append('g')
 			.attr('transform', 'translate('+margin.left+','+margin.top + ')');
 
 
+// tooltip2
+var tooltip = d3.select("body")
+		.append("div")
+		.attr("class", "ttip")
+		.style("position", "absolute")
+		.style("visibility", "hidden");
 
 
 
+// Second Plot
+
+var margin_scat = {
+	top: 20,
+	right: 20,
+	bottom: 50,
+	left: 50
+};
+
+var chart_area_wigth_scat = 300,
+	chart_area_height_scat = 300;
+
+
+var width_scat = chart_area_wigth_scat - (margin_scat.left + margin_scat.right);
+var height_scat = chart_area_height_scat - (margin_scat.top + margin_scat.bottom);
+
+
+
+var svg_scat_st = d3.select('#right').append('svg')
+					.attr('width', chart_area_wigth_scat)
+					.attr('height', chart_area_height_scat);
+
+var plot_scat_st = svg_scat_st.append('g')
+					.attr('transform', 'translate('+margin_scat.left+','+margin_scat.right+')');
+
+
+var svg_scat_en = d3.select('#right').append('svg')
+					.attr('width', chart_area_wigth_scat)
+					.attr('height', chart_area_height_scat);
+
+var plot_scat_en = svg_scat_en.append('g')
+					.attr('transform', 'translate('+margin_scat.left+','+margin_scat.right+')');
+
+
+
+
+// Load Files
 
 var queue = d3_queue.queue();
 	queue.defer(d3.json, 'a_data_init.json');
 	queue.defer(d3.json, 'c_data_tun.json');
+	queue.defer(d3.json, 'c_data_tun_data.json')
 	queue.await(makeNtwk);
 
 
-function makeNtwk(error, a_data, c_data){
+
+
+// Plot Function
+
+function makeNtwk(error, a_data, c_data, c_tun_data){
+
 
 	if (error) throw error;
 
 
-
+	// Left Plot
 
 	function lin2sq(n, sz){
 
@@ -175,6 +339,8 @@ function makeNtwk(error, a_data, c_data){
 	var gridsize_c = Math.floor(width / sz_c);
 
 
+	
+
 	var max_wt_st = d3.max(c_data.map(function(c){
 		return d3.max(c.a_wts_st.map(function(wt){
 			return wt.wt;
@@ -192,58 +358,115 @@ function makeNtwk(error, a_data, c_data){
 
 	var scale_a_hue = 281.1; // Purple!
 	var scale_a_lum = 50; 
-	var scale_a_sat = 80;
+	var scale_a_sat = 100; // Get good saturation and smoother hue spectrum
 
 	var scale_a_st = d3.scale.linear()
 				.domain([0, max_wt_st])
-				.range([100, 0])
+				.range([100, 40]) // cap minimum luminance above black so hue can be distinguished
 
 	var scale_a_en = d3.scale.linear()
 			.domain([0, max_wt_en])
-			.range([100, 0])
+			.range([100, 40])
+
+
+	// Ori Hue Scale
+	var scale_ori = d3.scale.linear()
+			.domain([0, 180])
+			.range([0, 360]);
+
 
 	function col_scal_a(wt){
-		return HUSL.toHex(scale_a_hue, scale_a_sat, scale_a_st(wt));
+		return HUSL.p.toHex(scale_a_hue, scale_a_sat, scale_a_st(wt));
 	}
 
 	function col_scal_a_en(wt){
-		return HUSL.toHex(scale_a_hue, scale_a_sat, scale_a_en(wt));
+		return HUSL.p.toHex(scale_a_hue, scale_a_sat, scale_a_en(wt));
+	}
+
+
+	// Ori Col Scale Functions
+	function col_scal_a_ori(wt, ori){
+		return HUSL.p.toHex(scale_ori(ori), scale_a_sat, scale_a_st(wt));
+	}
+
+	function col_scal_a_en_ori(wt, ori){
+		return HUSL.p.toHex(scale_ori(ori), scale_a_sat, scale_a_en(wt));
+	}
+
+	function col_scal_ori_init(ori) {
+		return HUSL.p.toHex(scale_ori(ori), 80, 65);
 	}
 
 
 
-	// Layer A
 
+	// Legend
+
+	var leg_n = 50;
+
+	var leg_ori = _.range(0, 180, 180/leg_n),
+		leg_wt = _.range(0, max_wt_st+max_wt_st/(leg_n-1), max_wt_st/(leg_n-1));
+
+
+	var leg_dat_2d_st = [];
+
+	// Can use 2d matrix with subselections as in docs
+
+	for (o in leg_ori) {
+		for (w in leg_wt) {
+			leg_dat_2d_st.push({'o':leg_ori[o], 'w':leg_wt[w]})
+		}
+	}
+	
+
+
+	// Scales for positioning the squares
+
+	// As the squares have a height/width, the greatest position or translation shouldn't be height, but rather one legend unit less than height.  Thus this calculation.
+	var leg_height = (height*(1-(1/leg_n))) 
+
+	var col_leg_scale_wt = d3.scale.linear()
+						.domain([0, max_wt_st])
+						.range([(height*(1-(1/leg_n))), 0]);
+
+	var col_leg_scale_ori = d3.scale.linear()
+						.domain([0, 180])
+						.range([0, height])
 
 
 	var legend = legend_canv.append('g')
-					.attr('transform', 'translate('+margin.left+','+margin.top + ')');
+					.attr('transform', 'translate('+(margin.left+(leg_2d_width_buffer/2))+','+margin.top + ')');
 
 	var leg_cards = legend.selectAll('.legend')
-			.data(_.rangeRight(0, max_wt_st, max_wt_st/50));
-
+			.data(leg_dat_2d_st);
+ 
 	leg_cards.enter().append('rect').classed('legend', true)
-			.attr('height', height/50)
-			.attr('width', gridsize_a)
-			.attr('y', function(d, i){
-				return i * height/50;
+			.attr('height', (height/leg_n) + 'px')
+			.attr('width', (height/leg_n) + 'px')
+			.attr('y', function(d){
+				return col_leg_scale_wt(d.w)+'px';
+			})
+			.attr('x', function(d){
+				return col_leg_scale_ori(d.o)+'px';
 			})
 			.style('fill', function(d){
-				return col_scal_a(d);
+				return col_scal_a_ori(d.w, d.o);
+				// col_scal_a(d);
 			})
 			.style('stroke', function(d){
-				return col_scal_a(d)
+				return col_scal_a_ori(d.w, d.o);
 			})
 			.style('stroke-width', 0.5+'px');
 
 
 
+	
 	var col_leg_scale = d3.scale.linear()
 							.domain([0, max_wt_st])
-							.range([height, 0]);
+							.range([(height), 0]); 
 
 	var col_axis_a = d3.svg.axis()
-					.orient('right')
+					.orient('left')
 					.scale(col_leg_scale)
 					.ticks(5);
 
@@ -253,32 +476,9 @@ function makeNtwk(error, a_data, c_data){
 	legend_canv.append('g')
 				.classed('col_axis_a axis', true)
 				.attr('width', 80)
-				.attr('height', chart_area_height)				
-				.attr('transform', 'translate('+(margin.left+gridsize_a)+',' + margin.top +')')
+				.attr('height', (chart_area_height))			
+				.attr('transform', 'translate('+(margin.left+(leg_2d_width_buffer/2))+',' + margin.top +')')
 				.call(col_axis_a);
-
-
-
-
-	var legend_en = legend_canv_en.append('g')
-					.attr('transform', 'translate('+margin.left+','+margin.top + ')');
-
-	var leg_cards_en = legend_en.selectAll('.legendEn')
-			.data(_.rangeRight(0, max_wt_en, max_wt_en/50));
-
-	leg_cards_en.enter().append('rect').classed('legendEn', true)
-			.attr('height', height/50)
-			.attr('width', gridsize_a)
-			.attr('y', function(d, i){
-				return i * height/50;
-			})
-			.style('fill', function(d){
-				return col_scal_a_en(d);
-			})
-			.style('stroke', function(d){
-				return col_scal_a_en(d)
-			})
-			.style('stroke-width', 0.5+'px');
 
 
 
@@ -289,24 +489,53 @@ function makeNtwk(error, a_data, c_data){
 	var col_axis_a_en = d3.svg.axis()
 					.orient('right')
 					.scale(col_leg_scale_en)
-					.ticks(8);
+					.ticks(5);
 
 
 
+	var right_trans_val = (chart_area_height+leg_2d_width_buffer) - ((leg_2d_width_buffer/2) +margin.right);
 
-	legend_canv_en.append('g')
+	legend_canv.append('g')
 				.classed('col_axis_a_en axis', true)
-				.attr('width', chart_area_wigth)
+				.attr('width', 80)
 				.attr('height', chart_area_height)				
-				.attr('transform', 'translate('+(margin.left+gridsize_a)+',' + margin.top +')')
+				.attr('transform', 'translate('+right_trans_val+',' + margin.top +')')
 				.call(col_axis_a_en);
 
 
+	var col_leg_scale_ori = d3.scale.linear()
+								.domain([0, 180])
+								.range([0, height]);
 
-	// legend_canv.append('g')
-	// 		.classed('col_axis_a')
-	// 		.attr('transform','translate('+gridsize_a+',0)')
-	// 		.call(col_axis_a);
+	var col_leg_axis_ori = d3.svg.axis()
+							.orient('bottom')
+							.scale(col_leg_scale_ori)
+							.tickValues([0,30,60,90,120,150,180]);
+
+	legend_canv.append('g')
+				.classed('col_axis_ori axis', true)
+				.attr('width', chart_area_height)
+				.attr('height', 25)
+				.attr('transform', 'translate('+(margin.right+(leg_2d_width_buffer/2))+','+(chart_area_height-margin.top)+')')
+				.call(col_leg_axis_ori);
+
+
+
+
+
+
+
+	// Layer A
+
+	// Before Plast
+
+
+	svg_a.append('text')
+				.attr('x', (margin.left + (width/2)))
+				.attr('y', (10))
+				.style('text-anchor','middle')
+				.text('Before Plasticity');
+
 
 
 
@@ -324,13 +553,32 @@ function makeNtwk(error, a_data, c_data){
 				var coord = lin2sq(d.id+1, sz_a);
 				return (coord[0]-1)*gridsize_a;
 			})
-			.attr('rx', 6)
-			.attr('ry', 6)
+			.attr('rx', 2)
+			.attr('ry', 2)
 			.attr('width', gridsize_a*0.9)
 			.attr('height', gridsize_a*0.9)
 			.style('fill', function(d){
-				return col_scal_a(d.wt);
+				return col_scal_ori_init(d.ori);
+			})
+			.on('mouseover', function(d){
+				tooltip.style('visibility', 'visible')
+						.style('top', (d3.event.pageY-10)+'px')
+						.style('left', (d3.event.pageX+10)+'px')
+						.text(d.ori + ' degs, id:' + d.id);
+			})
+			.on('mouseout', function(){
+				tooltip.style('visibility', 'hidden')
 			});
+
+
+
+	// After Plasticity
+
+	svg_a_en.append('text')
+				.attr('x', (margin.left + (width/2)))
+				.attr('y', (10))
+				.style('text-anchor','middle')
+				.text('After Plasticity');
 
 
 
@@ -349,13 +597,23 @@ function makeNtwk(error, a_data, c_data){
 				var coord = lin2sq(d.id+1, sz_a);
 				return (coord[0]-1)*gridsize_a;
 			})
-			.attr('rx', 6)
-			.attr('ry', 6)
+			.attr('rx', 2)
+			.attr('ry', 2)
 			.attr('width', gridsize_a*0.9)
 			.attr('height', gridsize_a*0.9)
 			.style('fill', function(d){
-				return col_scal_a(d.wt);
+				return col_scal_ori_init(d.ori);
+			})
+			.on('mouseover', function(d){
+				tooltip.style('visibility', 'visible')
+						.style('top', (d3.event.pageY-10)+'px')
+						.style('left', (d3.event.pageX+10)+'px')
+						.text(d.ori + ' degs, id:' + d.id);
+			})
+			.on('mouseout', function(){
+				tooltip.style('visibility', 'hidden')
 			});
+
 
 
 
@@ -369,9 +627,16 @@ function makeNtwk(error, a_data, c_data){
 
 
 	var tun_info = d3.select('#lay_c')
-						.append('text')
+						.append('div')
+						.classed('tun_cont', true);
+
+	var ori_info = tun_info.append('div')
 						.classed('tun', true)
 						.style('visibility', 'hidden');
+
+	var cv_info = tun_info.append('div')
+						.classed('tun', true)
+						.style('visibility', 'hidden');						
 
 
 	c_cells.enter().append('rect').classed('cell ccells', true)
@@ -383,21 +648,28 @@ function makeNtwk(error, a_data, c_data){
 				var coord = lin2sq(d.idx+1, sz_c);
 				return (coord[0]-1)*gridsize_c;
 			})
-			.attr('rx', 3)
-			.attr('ry', 3)
+			// .attr('rx', 0.5)
+			// .attr('ry', 0.5)
 			.attr('width', gridsize_c)
 			.attr('height', gridsize_c)
+			.style('fill', function(d){
+				return col_scal_ori_init(d.tun.pref_ori); 
+			})
 			.on('mouseover', function(d){
-				d3.select(this).style('fill', '#b0a8f1');
-				a_update_st(d.a_wts_st)
-				a_update_en(d.a_wts_st, d.a_wts_en);
+				c_select(d);
+				// d3.selectAll('.ccells').style('fill-opacity', '0.4')
+				// d3.select(this).style('fill-opacity', '1');
+				// a_update_st(d.a_wts_st);
+				// a_update_en(d.a_wts_st, d.a_wts_en);
 
-				var tun = d.tun;
-				return tun_info.style('visibility', 'visible').text('pref_ori: '+tun.pref_ori+' cv: '+tun.cv);
+				// var tun = d.tun;
+				// ori_info.style('visibility', 'visible').text('pref_ori: '+tun.pref_ori);
+				// cv_info.style('visibility', 'visible').text('cv: ' +tun.cv);
 			})
 			.on('mouseout', function(){
-				d3.select(this).style('fill', null);
-			});
+					select_reset();
+				}
+			);
 			// .on('click', function(d){
 			// 	a_update(d.a_wts);
 			// });
@@ -405,14 +677,69 @@ function makeNtwk(error, a_data, c_data){
 
 
 
-	function a_update(a_data) {
+	function c_select(d) {
 
-		a_cells.data(a_data, function(d){
-				return d.id;
-			})
+		d3.selectAll('.ccells').style('fill-opacity', '0.3');
+
+		var c_cell = d3.selectAll('.ccells').filter(function(dat){
+				return dat.idx == d.idx;
+		});
+
+		c_cell.style('fill-opacity', '1');
+
+
+		d3.selectAll('.scat_st').classed('scat_fade', true);
+		var scat_st = d3.selectAll('.scat_st').filter(function(dat){
+				return dat.idx == d.idx;
+		});
+		scat_st.classed('scat_sel', true);
+
+
+		d3.selectAll('.scat_en').classed('scat_fade', true);
+		var scat_en = d3.selectAll('.scat_en').filter(function(dat){
+				return dat.idx == d.idx;
+		});
+		scat_en.classed('scat_sel', true);
+
+
+		var c_cell_dat = c_cell.data();
+
+
+		a_update_st(c_cell_dat[0].a_wts_st);
+		a_update_en(c_cell_dat[0].a_wts_st, c_cell_dat[0].a_wts_en);
+
+		var tun = c_cell_dat[0].tun;
+		ori_info.style('visibility', 'visible').text('pref_ori: '+tun.pref_ori);
+		cv_info.style('visibility', 'visible').text('cv: ' +tun.cv);
+
+	}
+
+
+
+	function select_reset(){
+
+		d3.selectAll('.ccells').style('fill-opacity', '1');
+		a_reset();
+		d3.selectAll('.scat_st').classed('scat_sel scat_fade', false);
+		d3.selectAll('.scat_en').classed('scat_sel scat_fade', false);
+	}
+
+
+	function a_reset() {
+
+		d3.selectAll('.acells')
+			.classed('acellCon', false)
 			.style('fill', function(d){
-				return col_scal_a(d.wt);
-			});
+							return col_scal_ori_init(d.ori);
+							}
+					);
+
+		d3.selectAll('.acellsEn')
+			.classed('acellCon', false)
+			.style('fill', function(d){
+							return col_scal_ori_init(d.ori);
+							}
+					);
 
 	};
 
@@ -421,7 +748,7 @@ function makeNtwk(error, a_data, c_data){
 	function a_update_st(a_data){
 		// Input is start a_wts {id, wt}
 
-		a_idx = a_data.map(function(ad){
+		var a_idx = a_data.map(function(ad){
 			return ad.id;
 		})
 
@@ -429,6 +756,21 @@ function makeNtwk(error, a_data, c_data){
 		d3.selectAll('.acells')
 			.classed('acellCon', false)
 			.style('fill', col_scal_a(0));
+
+
+		var acells = d3.selectAll('.acellsEn').filter(function(d,i){
+			return _.includes(a_idx, d.id)
+		});
+
+		var acells_data = acells.data();
+
+
+		// Hope that there is no jumbling in this process;
+		// Merge pre-existing ori data into provided a_data from c_cell;
+		var a_data = a_data.map(function(d,i) {
+			return {'id':d.id, 'wt':d.wt, 'ori':acells_data[i].ori};
+		});
+
 
 
 		acells = d3.selectAll('.acells').filter(function(d,i){
@@ -439,7 +781,7 @@ function makeNtwk(error, a_data, c_data){
 		acells.classed('acellCon', true)
 			.style('fill', function(d){
 
-				return col_scal_a(d.wt);
+				return col_scal_a_ori(d.wt, d.ori);
 			});
 
 
@@ -455,32 +797,200 @@ function makeNtwk(error, a_data, c_data){
 			return ad.id;
 		})
 
+
+		// reset styling of lay A to **not connected**
+
 		d3.selectAll('.acellsEn')
 			.classed('acellCon', false)
 			.style('fill', col_scal_a(0));
 
 
+		// var acells = d3.selectAll('.acellsEn').filter(function(d,i){
+		// 	return _.includes(a_idx, d.id)
+		// }).data(a_data, function(d){return d.id;});
+
+
+
 		var acells = d3.selectAll('.acellsEn').filter(function(d,i){
 			return _.includes(a_idx, d.id)
-		}).data(a_data, function(d){return d.id;});
-
-		acells.style('fill', function(d){
-
-				return col_scal_a_en(d.wt);
-			});
-
-
-		var a_idx_bef = a_cels_con.map(function(ad){
-			return ad.id;
 		});
 
-		d3.selectAll('.acellsEn').filter(function(d,i){
-			return _.includes(a_idx_bef, d.id);
-		}).classed('acellCon', true);
+		var acells_data = acells.data();
 
 
+		// Hope that there is no jumbling in this process;
+		// Merge pre-existing ori data into provided a_data from c_cell;
+		var a_data = a_data.map(function(d,i) {
+			return {'id':d.id, 'wt':d.wt, 'ori':acells_data[i].ori};
+		});
+
+
+
+		acells.data(a_data, function(d){return d.id;})
+				.style('fill', function(d){
+
+				return col_scal_a_en_ori(d.wt, d.ori);
+			})
+				.classed('acellCon', true); // Embolden borders of initially connected cells
 
 	};
+
+
+
+
+	// Right Plot
+
+
+	// Start Scatter
+
+	// Axes
+
+	var circ_var = d3.scale.linear() // y axis
+					.domain([0.5, 1])
+					.range([height_scat, 0])
+
+	var ori = d3.scale.linear() // x axis
+				.domain([0, 180])
+				.range([0, width_scat])
+
+
+	var circ_var_axis = d3.svg.axis()
+							.orient('left')
+							.scale(circ_var);
+
+	var ori_axis = d3.svg.axis()
+						.orient('bottom')
+						.scale(ori);
+
+
+	// append axes
+
+	plot_scat_st.append('g')
+				.classed('cv axis', true)
+				.attr('transform', 'translate(0,0)')
+				.call(circ_var_axis);
+
+	plot_scat_st.append('g')
+				.classed('ori axis', true)
+				.attr('transform', 'translate(0,' + height_scat+')')
+				.call(ori_axis);
+
+	plot_scat_en.append('g')
+				.classed('cv axis', true)
+				.attr('transform', 'translate(0,0)')
+				.call(circ_var_axis);
+
+	plot_scat_en.append('g')
+				.classed('ori axis', true)
+				.attr('transform', 'translate(0,'+height_scat+')')
+				.call(ori_axis);
+
+
+
+
+	svg_scat_st.append('text')
+				.attr('x', (margin_scat.left + (width_scat/2)))
+				.attr('y', (10))
+				.style('text-anchor','middle')
+				.text('Before Plasticity');
+
+
+	svg_scat_st.append('text')
+				.attr('x', (margin_scat.left + (width_scat/2)))
+				.attr('y', (chart_area_height_scat))
+				.style('text-anchor','middle')
+				.text('Preferred Orientation');
+
+	svg_scat_st.append('text')
+				.attr('transform', 'rotate(-90)')
+				.attr('y', (margin_scat.left -40))
+				.attr('x', 0-(margin_scat.top +(height_scat/2)))
+				.style('text-anchor','middle')
+				.text('Circular Variance');
+
+
+	svg_scat_en.append('text')
+				.attr('x', (margin_scat.left + (width_scat/2)))
+				.attr('y', (10))
+				.style('text-anchor','middle')
+				.text('After Plasticity');
+
+
+
+	svg_scat_en.append('text')
+				.attr('x', (margin_scat.left + (width_scat/2)))
+				.attr('y', (chart_area_height_scat))
+				.style('text-anchor','middle')
+				.text('Preferred Orientation');
+
+	svg_scat_en.append('text')
+				.attr('transform', 'rotate(-90)')
+				.attr('y', (margin_scat.left -40))
+				.attr('x', 0-(margin_scat.top +(height_scat/2)))
+				.style('text-anchor','middle')
+				.text('Circular Variance');
+
+
+
+	var scat_st = plot_scat_st.selectAll('.scat_st')
+						.data(c_tun_data, function(d){
+							return d.idx;
+						});
+
+	scat_st.enter().append('circle')
+					.classed('scat_st', true)
+					.attr('cx', function(d){
+						return ori(d.tun_st.pref_ori)
+					})
+					.attr('cy', function(d){
+						return circ_var(d.tun_st.cv)
+					})
+					.attr('r', 4)
+					.attr('fill', function(d){
+						return HUSL.p.toHex(scale_ori(d.tun_st.pref_ori), 100, 60)
+					})
+					.on('mouseover', function(d){
+						c_select(d);
+					})
+					.on('mouseout', function(d){
+						select_reset();
+					});
+
+
+
+
+	var scat_en = plot_scat_en.selectAll('.scat_en')
+						.data(c_tun_data, function(d){
+							return d.idx;
+						});
+
+
+
+	scat_en.enter().append('circle')
+					.classed('scat_en', true)
+					.attr('cx', function(d){
+						return ori(d.tun_en.pref_ori)
+					})
+					.attr('cy', function(d){
+						return circ_var(d.tun_en.cv)
+					})
+					.attr('r', 4)
+					.attr('fill', function(d){
+						return HUSL.p.toHex(scale_ori(d.tun_en.pref_ori), 100, 60)
+					})
+
+					.on('mouseover', function(d){
+						c_select(d);
+					})
+					.on('mouseout', function(d){
+						select_reset();
+					});
+
+
+
+
+
+
 
 
 
